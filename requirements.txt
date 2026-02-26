@@ -1,0 +1,7 @@
+langchain
+langgraph
+langchain-aws
+langchain-mcp-adapters
+mcp
+python-dotenv
+couchbase
