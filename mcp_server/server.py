@@ -1,3 +1,5 @@
+print('starting server...') # test
+
 from mcp.server.fastmcp import FastMCP 
 
 # couchbase sdk classes to connect to the database. 
@@ -11,6 +13,11 @@ import os
 
 load_dotenv()
 
+
+print("CONN:", os.getenv("CB_CONNECTION_STRING"))
+print("USER:", os.getenv("CB_USERNAME"))
+print("BUCKET:", os.getenv("CB_BUCKET_NAME"))
+
 auth = PasswordAuthenticator(
     os.getenv("CB_USERNAME"),
     os.getenv("CB_PASSWORD")
@@ -21,25 +28,26 @@ cluster = Cluster(
     ClusterOptions(auth)
 )
 
-cluster.wait_until_ready(timeout=timedelta(seconds=5))
+# cluster.wait_until_ready(timeout=timedelta(seconds=5))
+# removed wait_until_ready to prevent blocking startup. sdk connects lazily on 1st query
+
 bucket = cluster.bucket(os.getenv("CB_BUCKET_NAME"))
 
 mcp = FastMCP("couchbase-server") # starting server
 
 @mcp.tool()
-def query_database(sql : str) -> str:
-    
-    try: 
-        result = cluster.query(sql)
-        rows = []
-        for row in result:
-            rows.append(row)
-
-        return str(rows)
-    
+def query_inventory(collection: str, where: str = "", limit: int = 5) -> str:
+    try:
+        query = f"""
+        SELECT *
+        FROM `travel-sample`.`inventory`.`{collection}`
+        {f"WHERE {where}" if where else ""}
+        LIMIT {limit}
+        """
+        result = cluster.query(query)
+        return str([row for row in result])
     except Exception as e:
-        return f"error : {str(e)}"
-
+        return f"error: {str(e)}"
 
 @mcp.tool()
 def list_collections() -> str:
